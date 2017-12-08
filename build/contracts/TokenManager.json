@@ -2520,7 +2520,7 @@
     "4": {
       "events": {},
       "links": {},
-      "address": "0xbb220a18c33be632fd2a64ee0883da0d03c5a2f3"
+      "address": "0x8a0e9af1271b761edfc28292b8778503fd63568f"
     },
     "1509293435080": {
       "events": {},
@@ -2529,5 +2529,5 @@
     }
   },
   "schemaVersion": "1.0.0",
-  "updatedAt": "2017-11-01T17:24:55.599Z"
+  "updatedAt": "2017-12-08T17:04:54.696Z"
 }

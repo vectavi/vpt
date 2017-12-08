@@ -68,48 +68,36 @@ There are two contracts involved in presale process:
 
 For testing purposes those contracts are deployed on test networks:
 
-//
-// Rinkeby: Wed 01 Nov 2017 01:40:31 PM EDT
-//
-// TokenManager address: 0xbb220a18c33be632fd2a64ee0883da0d03c5a2f3
-//   "blockHash": "0x25878b4e078a606ec03d3aceda6e6d3e51a5f2193f85d10f430d07746946d3ba",
-//   "blockNumber": "0x11d2d7",
-//   "contractAddress": "0xbb220a18c33be632fd2a64ee0883da0d03c5a2f3",
-//   "cumulativeGasUsed": "0x21e49b",
-//   "from": "0x47cd92b0824e06accd9805bebeb89b676bedb79f",
-//   "gasUsed": "0x1c24b0",
-//   "status": "0x1",
-//   "transactionHash": "0x8fb92b98cd6437cc84d4c3c9d6bd1ccbc8e9c3c6ec3b2ea11e8679ddec8b2f65",
-//
-// Token address: 0xf66ea29faadd8fe5bfac8e900f66db7fe02b1d14
-//   "blockHash": "0xed9083a55376cc986b01f284521017da12573c9fd985e1633a1faefe87ad846a",
-//   "blockNumber": "0x11d2d9",
-//   "contractAddress": "0xf66ea29faadd8fe5bfac8e900f66db7fe02b1d14",
-//   "cumulativeGasUsed": "0xa645e",
-//   "from": "0x47cd92b0824e06accd9805bebeb89b676bedb79f",
-//   "gasUsed": "0xa645e",
-//   "status": "0x1",
-//   "transactionHash": "0xeb49a67be9c3ac4d4a740fc1dcffcc26a342d5e6ed53fb0d2edda53e16e0e317",
-//
+  - Rinkeby: Fri 08 Dec 2017 12:14:40 PM EST 
+    - TokenManager: 0x8a0e9af1271b761edfc28292b8778503fd63568f
+      - "blockHash": "0x917c6ae1359ea9c56e2cb0b3cef8956be1cb0ba79f513c3949875b34e3b91ef4",
+      - "blockNumber": "0x150cac",
+      - "status": "0x1",
+      - "transactionHash": "0x698d8601bb1b9911b73ae2b5bf271db4c6b174bbb1a6e53b6655ef93ac4b99b2",
 
-`TokenManager` contract implementation is based on the [multisig wallet by
-Gnosis](https://blog.gnosis.pm/release-of-new-multisig-wallet-59b6811f7edc),
+    - PresaleToken: 0x62f237fe1af3287eca044a554b3e429f4c6e2536
+      - "blockHash": "0x277d503725d1228b70eaa8e3138511afe8f313110183ffb6c6358ccb1f3acf0e",
+      - "blockNumber": "0x150cae",
+      - "status": "0x1",
+      - "transactionHash": "0xe2710eafa5988ea0bbf9b0e809718b52e4f1dd740569e55525bc31c9663b03d1",
+
+
+Reference Contract Sources
+--------------------------
+Presale Token contract is adapted from the [SONM project](https://github.com/sonm-io/presale-token.git)
+
+Token Manager is an implementation of the [Gnosis multisig wallet](https://github.com/gnosis/MultiSigWallet)
+also see the blog [Release of new Multisig Wallet](https://blog.gnosis.pm/release-of-new-multisig-wallet-59b6811f7edc)
 it is used to collectively manage ETH funds and allows withdrawals,
-adding/removing owners, and sending custom transactions. There is web-based UI
-to interact with it: https://wallet.gnosis.pm.
+adding/removing owners, and sending custom transactions. There is [web-based UI to interact with it](https://wallet.gnosis.pm).
 
 The deployed `TokenManager` contracts are configured each with 3 manager
 addresses and require 2 confirmations to run transactions:
 
-  else if (network === "rinkeby") {
-    team =
-      [ "0x47cD92b0824E06ACCd9805bebEB89b676beDB79F" // primary, Main account (Etherbase, owner 1)
-      , "0x6b385cE594d12d4C4EfD5e19FF34c8eabb78d531" // secondary, Account 2 (owner 2)
-      , "0xAfc411ab664F9c38044510D9fd40F62E79460594" // secondary, Account 3 (owner 3)
-      ];
-    escrow = "0x6C2266C3B89e0e07bD1d7e02f18AD581Bf2b933F"; // rinkeby (Account 4, escrow)
-
-  }
+  - Manager addresses on Rinkeby
+    -  [0x47cD92b0824E06ACCd9805bebEB89b676beDB79F](https://rinkeby.etherscan.io/address/0x47cD92b0824E06ACCd9805bebEB89b676beDB79F)
+    - [0x6b385cE594d12d4C4EfD5e19FF34c8eabb78d531](https://rinkeby.etherscan.io/address/0x6b385cE594d12d4C4EfD5e19FF34c8eabb78d531)
+    - [0xAfc411ab664F9c38044510D9fd40F62E79460594](https://rinkeby.etherscan.io/address/0xAfc411ab664F9c38044510D9fd40F62E79460594)
 
 All those addresses are preloaded with some ether for testing purposes.
 

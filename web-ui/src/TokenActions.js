@@ -13,18 +13,25 @@ import IconBlur             from 'material-ui/svg-icons/image/blur-on';
 import IconSync             from 'material-ui/svg-icons/notification/sync';
 import IconCheck            from 'material-ui/svg-icons/navigation/check';
 import {green500, yellow500, grey500} from 'material-ui/styles/colors';
+import muiThemeable from 'material-ui/styles/muiThemeable';
 
 import
   { Table, TableBody, TableRow, TableRowColumn
   } from 'material-ui/Table';
 
+import TokenActionTextField from './TokenActionTextField';
+import TokenActionListItem from './TokenActionListItem';
+import TokenActionSubheader from './TokenActionSubheader';
+import TokenActionActionListItem from './TokenActionActionListItem';
+import Phase from './phase';
 
-export default function(props) {
-  const {info, tokenMsg, defaultAccount, crowdsaleManager} = props;
+
+export default muiThemeable()(function(props) {
+  const {info, tokenMsg, defaultAccount, crowdsaleManager, isReadOnly} = props;
 
   const row = (name, value) => (
     <TableRow>
-      <TableRowColumn style={{width: '31%'}}>{name}</TableRowColumn>
+      <TableRowColumn style={{width: '35%'}}>{name}</TableRowColumn>
       <TableRowColumn>{value}</TableRowColumn>
     </TableRow>
   );
@@ -37,47 +44,51 @@ export default function(props) {
   const isManager = info.tokenManager.managers.includes(defaultAccount);
 
   const buttonStyle = {
-    margin: '0 0 0 1.5em'
+    marginLeft: '5em'
   };
   const button = (icon, label, action, active=true) =>
     <RaisedButton secondary={true}
       icon={icon}
       label={label}
       onTouchTap={action}
-      disabled={!active}
+      disabled={props.isReadOnly && !active}
       style={buttonStyle}
     />;
 
+  const textFieldContainerStyle = {
+    textAlign: 'center',
+    borderTop: '1px',
+    borderRight: '0',
+    borderBottom: '1px',
+    borderLeft: '0',
+    borderStyle: 'solid',
+    borderColor: props.muiTheme.tableRow.borderColor
+  }
+
   const action = (text1, text2, icon, act) =>
-    <ListItem insetChildren={true}
+    <TokenActionActionListItem insetChildren={true}
       primaryText={text1}
       secondaryText={text2}
       primaryTogglesNestedList={true}
       leftIcon={icon}
       nestedItems={[
-        <ListItem key={0} disabled={true} insetChildren={true}>
+        <ListItem key={0} disabled={true} insetChildren={false} style={{padding: '0'}}>
           {act}
         </ListItem>
       ]}
     />;
-
-    const addressStyle = {
-      width: '26em',
-      textAlign: 'left',
-      fontSize: '12px',
-      color: 'grey'
-    };
-  const errorStyle = props.tokenMsg && props.tokenMsg.ok
-    ? { color: green500 }
-    : {};
 
   const validateCrowdsaleManagerAddress = ev => {
     ev.target.value.replace(/[^xX\.0-9A-Fa-f]/g, '');
     props.onCrowdsaleManagerChanged(ev.target.value);
   }
 
+  const PhaseStr = {};
+  Object.keys(Phase).forEach(k => PhaseStr[Phase[k]] = k);
+
   return (
     <div className="Actions">
+    { !props.isReadOnly &&
       <Table selectable={false}>
         <TableBody displayRowCheckbox={false}>
           {row("Multisig address", info.tokenManager.address)}
@@ -85,17 +96,18 @@ export default function(props) {
           {row("Crowdsale address", info.crowdsaleManager.address)}
         </TableBody>
       </Table>
-      <List>
-        <Subheader inset={true}>Presale managers</Subheader>
-        { info.tokenManager.managers.map((man, i) =>
-          <ListItem key={i} disabled={true}
+    }
+      <List style={{margin: '5px 0', padding:0}}>
+        <TokenActionSubheader inset={true} children={"Presale managers"}/>
+        { !props.isReadOnly && info.tokenManager.managers.map((man, i) =>
+          <TokenActionListItem key={i} disabled={true}
             leftIcon={managerIcon(man)}
             primaryText={man}
           />
         )}
-        { info.tokenManager.pendingActions.length > 0 &&
+        { !props.isReadOnly && info.tokenManager.pendingActions.length > 0 &&
           <div>
-            <Subheader inset={true}>Pending actions</Subheader>
+            <TokenActionSubheader inset={true} children={"Pending actions"}/>
             {info.tokenManager.pendingActions.map((act, i) =>
               <ListItem key={i}
                 insetChildren={true}
@@ -129,46 +141,44 @@ export default function(props) {
 
         { isManager &&
           <div>
-            <Subheader inset={true}>Available actions</Subheader>
-            { info.currentPhase === 0 &&
+            <TokenActionSubheader inset={true} children={"Available actions"}/>
+            { info.currentPhase === Phase['Created'] &&
               action(
                 "Start presale",
                 "Presale is not running. Investors can't buy tokens yet.",
                 <IconMoney/>,
-                button(<IconMoney/>, "Start presale", () => props.onSetPhase(1)))
+                button(<IconMoney/>, "Start presale", () => props.onSetPhase(Phase['Running'])))
             }
-            { info.currentPhase === 1 &&
+            { info.currentPhase === Phase['Running'] &&
               action(
                 "Pause presale",
                 "You can pause presale to prevent investors from buying tokens.",
                 <IconMoneyOff/>,
-                button(<IconMoneyOff/>, "Pause presale", () => props.onSetPhase(2)))
+                button(<IconMoneyOff/>, "Pause presale", () => props.onSetPhase(Phase['Paused'])))
             }
-            { info.currentPhase === 2 &&
+            { info.currentPhase === Phase['Paused'] &&
               action(
                 "Resume presale",
                 "Presale is paused. Investors can't buy tokens until you resume it.",
                 <IconMoney/>,
-                button(<IconMoney/>, "Resume presale", () => props.onSetPhase(1)))
+                button(<IconMoney/>, "Resume presale", () => props.onSetPhase(Phase['Running'])))
             }
             { info.balance > 0 &&
               action(
-                "Withdraw funds to multisig contract",
+                "Withdraw funds to escrow account",
                 "There are some Ether on presale contract.",
                 <IconBusiness/>,
                 button(<IconBusiness/>, "Withdraw ether", props.onWithdraw))
             }
-            { info.currentPhase < 3 &&
+            { info.currentPhase < Phase['Migrating'] &&
               action(
                 "Set crowdsale manager address",
                 "Must set before token migration to enable tokens migration/convertion.",
                 <IconBlur/>,
-                <div className="set-cs-addr">
-                  <TextField
+                <div className="set-cs-addr" style={textFieldContainerStyle}>
+                  <TokenActionTextField
+                    tokenMsg={props.tokenMsg}
                     hintText="Crowdsale Manager Address"
-                    inputStyle={addressStyle}
-                    errorStyle={errorStyle}
-                    errorText={tokenMsg && tokenMsg.text}
                     value={crowdsaleManager}
                     onChange={validateCrowdsaleManagerAddress}
                   />
@@ -176,17 +186,17 @@ export default function(props) {
                   { button(<IconBlur/>, "Set address", () => props.onSetCrowdsaleManager(crowdsaleManager), crowdsaleManager) }
                 </div>)
             }
-            { (info.currentPhase === 1 || info.currentPhase === 2) &&
+            { (info.currentPhase === Phase['Running'] || info.currentPhase === Phase['Paused']) &&
               info.crowdsaleManager.address !== "0x0000000000000000000000000000000000000000" &&
               action(
                 "Start token migration",
                 "Token migration is controlled by crowdsale manager.",
                 <IconSync/>,
-                button(<IconBlur/>, "Start migration", () => props.onSetPhase(3)))
+                button(<IconBlur/>, "Start migration", () => props.onSetPhase(Phase['Migrating'])))
             }
           </div>
         }
       </List>
     </div>
   );
-}
+})

@@ -6,23 +6,20 @@ import PresaleToken_json    from './PresaleToken';
 import TokenManager_json    from './TokenManager';
 import Const                from './constants';
 
+import Phase from './phase';
 import Web3 from 'web3';
+import PROVIDER_URL         from './provider';
+
 const PresaleToken = Truffle(PresaleToken_json);
 const TokenManager = Truffle(TokenManager_json);
-//const web3 = window.web3;
-/*global web3*/
-//Web3 = require('web3');
-console.log("typeof Web3 is "+(typeof Web3));
+
 if (typeof web3 !== 'undefined') {
-  console.log("(typeof web3 !== 'undefined') is true");
   var web3 = new Web3(web3.currentProvider);
 } else {
   // set the provider you want from Web3.providers
-  console.log("(typeof web3 !== 'undefined') is false");
-  var web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
-  //var web3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/Jhq7HuarxWAoAQobO50k"));
+  var web3 = new Web3(new Web3.providers.HttpProvider(PROVIDER_URL));
 }
-
+const _isReadOnly = !(PROVIDER_URL && /localhost/gi.test(PROVIDER_URL));
 
 
 if(web3) {
@@ -36,7 +33,9 @@ const fromWei = x => {
   else return y;
 }
 
-const PHASE_NAME = ["Created", "Running", "Paused", "Migrating", "Migrated"];
+const PhaseStr = {};
+Object.keys(Phase).forEach(k => PhaseStr[Phase[k]] = k);
+
 let net;
 
 
@@ -110,6 +109,7 @@ const API = {
       ),
 
   getTokenEvents: address => new Promise((resolve, reject) => {
+    if (_isReadOnly) return resolve([]);
     const t = TokenManager.at(address);
     const filter = t.allEvents({
       fromBlock: Const[net].DEPLOYMENT_BLOCK_NUMBER,
@@ -119,6 +119,7 @@ const API = {
 
 
   getManagerActions: m => new Promise((resolve, reject) => {
+    if (_isReadOnly) return resolve([]);
     const filter = m.allEvents({
       fromBlock: Const[net].DEPLOYMENT_BLOCK_NUMBER,
       toBlock: "latest"
@@ -135,7 +136,7 @@ const API = {
           case "LogTokenSetPresalePhase": {
             txMap[txId].action = "setPresalePhase";
             txMap[txId].newPhase = e.args._phase;
-            txMap[txId].name = `Switch to phase: ${PHASE_NAME[e.args._phase]}`;
+            txMap[txId].name = `Switch to phase: ${PhaseStr[e.args._phase]}`;
             break;
           }
           case "LogTokenWithdrawEther": {
@@ -169,14 +170,15 @@ const API = {
     })
   }),
 
-  buyTokens: (tokenAddress, value) => new Promise((resolve, reject) =>
+  buyTokens: (tokenAddress, value) => new Promise((resolve, reject) => {
     web3.eth.sendTransaction(
       { to: tokenAddress,
         value: web3.toWei(value, "ether"),
         gas: 500000,
       },
-      (err, res) => err ? reject(err) : resolve(res)
-    )),
+      (err, res) => err ? reject(err) : resolve({tx: res})
+    )
+  }),
 
   setPhase: (tokenAddr, phase, mgrAddr) => {
     const m = TokenManager.at(mgrAddr);

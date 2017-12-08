@@ -1,12 +1,13 @@
 import React                from 'react';
 import TextField            from 'material-ui/TextField';
-import RaisedButton         from 'material-ui/RaisedButton';
 import RandomIcon           from 'material-ui/svg-icons/places/ac-unit';
 
 import
   { Table, TableBody, TableRow, TableRowColumn
   } from 'material-ui/Table';
 
+import TextFieldContainer   from './TextFieldContainer';
+import TokenPhaseText       from './TokenPhaseText';
 
 export default class TokenInfo extends React.Component {
   constructor(props) {
@@ -32,28 +33,40 @@ export default class TokenInfo extends React.Component {
       </TableRow>
     );
 
+    const buttonStyle = {
+      marginLeft: '5em'
+    };
+
     const phaseBlock =
       [ <p><b>Presale is not yet started.</b> Please check this page later.</p>
       , <div>
-          <p><b>Presale is in progress.</b> You can buy some tokens here.</p>
-          <div style={{textAlign: 'center'}}>
-            <TextField hintText="Value in Ether"
-              value={this.state.etherVal}
-              onChange={this._etherValChanged}
-            />
-            <RaisedButton
-              secondary={true}
-              icon={<RandomIcon/>}
-              label="Buy tokens"
-              style={{margin: '12px'}}
-              onClick={this._buyTokens}
-              disabled={!this.state.etherVal}
-            />
-          </div>
+          <TokenPhaseText
+            boldText={'Presale is in progress.'}
+            normalText={' You can buy some tokens here.'}
+          />
+          <TextFieldContainer txtHintText="Value in Ether"
+              txtValue={this.state.etherVal}
+              txtOnChange={this._etherValChanged}
+              btnSecondary={true}
+              btnIcon={<RandomIcon/>}
+              btnLabel="Buy tokens"
+              btnStyle={{margin: '12px'}}
+              btnOnClick={this._buyTokens}
+              btnDisabled={this.state.isReadOnly || !this.state.etherVal}
+          />
         </div>
-      , <p><b>Presale is paused.</b> Please come back later.</p>
-      , <p><b>Presale is over.</b> You can now migrate your tokens.</p>
-      , <p><b>Presale is over.</b> Migration is over too.</p>
+      , <TokenPhaseText
+          boldText={'Presale is paused.'}
+          normalText={' Please come back later.'}
+        />
+      , <TokenPhaseText
+          boldText={'Presale is over.'}
+          normalText={' You can now migrate your tokens.'}
+        />
+      , <TokenPhaseText
+          boldText={'Presale is over.'}
+          normalText={' Migration is over too.'}
+        />
       ];
 
     return (

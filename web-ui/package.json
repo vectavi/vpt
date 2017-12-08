@@ -2,7 +2,7 @@
   "name": "vectavi-presale-token",
   "version": "0.1.0",
   "private": true,
-  "homepage": "http://192.168.1.7:3000/",
+  "homepage": ".",
   "dependencies": {
     "babel-preset-react": "^6.24.1",
     "gh-pages": "^0.12.0",

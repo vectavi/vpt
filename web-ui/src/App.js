@@ -1,4 +1,7 @@
 import React                from 'react';
+import lightBaseTheme       from 'material-ui/styles/baseThemes/lightBaseTheme';
+import darkBaseTheme        from 'material-ui/styles/baseThemes/darkBaseTheme';
+import getMuiTheme          from 'material-ui/styles/getMuiTheme';
 import MuiThemeProvider     from 'material-ui/styles/MuiThemeProvider';
 import CircularProgress     from 'material-ui/CircularProgress';
 import {Tabs, Tab}          from 'material-ui/Tabs';
@@ -8,26 +11,32 @@ import FlatButton           from 'material-ui/FlatButton';
 import {green500}           from 'material-ui/styles/colors';
 
 import Web3 from 'web3';
+import PROVIDER_URL         from './provider';
 import API                  from './tokenAPI';
 import TokenInfo            from './TokenInfo';
 import TokenEvents          from './TokenEvents';
 import TokenActions         from './TokenActions';
+import TokenAppBar          from './TokenAppBar';
+import TokenAddressTextField from './TokenAddressTextField'
+import muiThemeable         from 'material-ui/styles/muiThemeable';
 import './App.css';
 
-//const web3 = window.web3;
-/*global web3*/
-//Web3 = require('web3');
+import pw_prompt from './password'
+
 if (typeof web3 !== 'undefined') {
   var web3 = new Web3(web3.currentProvider);
 } else {
   // set the provider you want from Web3.providers
-  var web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
-  //var web3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/Jhq7HuarxWAoAQobO50k"));
+  var web3 = new Web3(new Web3.providers.HttpProvider(PROVIDER_URL));
 }
+
+const _isReadOnly = !(PROVIDER_URL && /localhost/gi.test(PROVIDER_URL));
+//console.log('PROVIDER_URL: ', PROVIDER_URL, ', _isReadOnly: ',_isReadOnly);
 
 Object.values = (obj) => Object.keys(obj).map(key => obj[key]);
 
-export default class App extends React.Component {
+export default muiThemeable()(class App extends React.Component {
+
   constructor(props) {
     super(props);
 
@@ -38,7 +47,12 @@ export default class App extends React.Component {
       tokenEvents: null,
       defaultAccount: null,
       isDialogOpen: false,
-      crowdsaleManager: ''
+      crowdsaleManager: '',
+      networkName: null,
+      spin: false,
+      theme: "dark",
+      muiTheme: darkBaseTheme,
+      isReadOnly: _isReadOnly
     };
   }
 
@@ -49,59 +63,94 @@ export default class App extends React.Component {
     API.checkNetwork().then(res => {
       this.setState(
         { tokenAddress: res.tokenAddress,
-          tokenMsg: {text: res.networkName, ok: true}
+          tokenMsg: {text: res.networkName, ok: true},
+          networkName: res.networkName,
+          spin: true
         },
         this._loadTokenInfo
-      );
+      )
 
-      // track account changes
-      this._trackAccountInterval = setInterval(() => {
-        if (web3.eth.accounts[0] !== this.state.defaultAccount) {
-          web3.eth.defaultAccount = web3.eth.accounts[0];
-          this.setState({defaultAccount: web3.eth.accounts[0]});
-        }
-      }, 600);
+      if (!this.state.isReadOnly) {
+        // track account changes
+        this._trackAccountInterval = setInterval(() => {
+          if (web3.eth.accounts[0] !== this.state.defaultAccount) {
+            web3.eth.defaultAccount = web3.eth.accounts[0];
+            this.setState({defaultAccount: web3.eth.accounts[0]});
+          }
+        }, 600);
+      }
+    })
+    .catch(err => {
+      this._setErrorState(err)
     })
   }
 
 
   componentWillUnmount() {
-    clearInterval(this._trackAccountInterval);
+    if (!this.state.isReadOnly) {
+      clearInterval(this._trackAccountInterval);
+    }
   }
 
+
+  _setErrorState = err => {
+    //console.log('ERROR', err.toString());
+    this.setState({spin: false})
+    this.setState({tokenMsg: {text: "Unexpected error, sorry"}})
+    if(err.INVALID_TOKEN_ADDRESS) {
+      this.setState({tokenMsg: {text: "Invalid address format"}})
+    } else if(err.INVALID_TOKEN_NAME) {
+      this.setState({tokenMsg: {text: "Unexpected token name"}})
+    } else if(err.message) {
+      this.setState({tokenMsg: {text: "Unexpected error, "+err.message}})
+    }
+  }
 
   _loadTokenInfo = () =>
     API.getTokenInfo(this.state.tokenAddress)
       .then(tokenInfo => this.setState({
         tokenInfo,
-        defaultAccount: web3.eth.accounts[0]
+        defaultAccount: this.state.isReadOnly ? '' : web3.eth.accounts[0],
+        spin: false
       }))
       .catch(err => {
-        console.log('ERROR', err);
-        this.setState({tokenMsg: {text: "Unexpected error, sorry"}})
-        if(err.INVALID_TOKEN_ADDRESS) {
-          this.setState({tokenMsg: {text: "Invalid address format"}})
-        } else if(err.INVALID_TOKEN_NAME) {
-          this.setState({tokenMsg: {text: "Unexpected token name"}})
-        } else if(err.message) {
-          this.setState({tokenMsg: {text: "Unexpected error, "+err.message}})
-        }
+        this._setErrorState(err)
       })
 
 
   _changeTab = tab => {
     switch(tab.props.value) {
       case "events": {
+        this.setState({tokenEvents: null})
         API.getTokenEvents(this.state.tokenInfo.tokenManager.address)
-          .then(tokenEvents => this.setState({tokenEvents}));
+          .then(tokenEvents => this.setState({tokenEvents}))
+          .catch(err => {
+            this._setErrorState(err)
+          })
         break;
       }
       default: break;
     }
   }
 
-
   _closeDialog = () => this.setState({isDialogOpen: false}, this._loadTokenInfo)
+
+  _toggleTheme = () => {
+    //console.log("_toggleTheme from theme ", this.state.theme)
+    switch(this.state.theme) {
+      case "light": {
+        this.setState({muiTheme: darkBaseTheme})
+        this.setState({theme: "dark"})
+        break;
+      }
+      case "dark": {
+        this.setState({muiTheme: lightBaseTheme})
+        this.setState({theme: "light"})
+        break;
+      }
+      default: break;
+    }
+  }
 
 
   _notifyTransaction = res => {
@@ -119,27 +168,43 @@ export default class App extends React.Component {
 
   _onActionSetPhase = newPhase => {
     const {tokenInfo} = this.state;
+    this.setState({spin: true})
     API.setPhase(tokenInfo.address, newPhase, tokenInfo.tokenManager.address)
       .then(this._notifyTransaction)
+      .catch(err => {
+        this._setErrorState(err)
+      })
   }
 
 
   _onActionWithdraw = () => {
     const {tokenInfo} = this.state;
+    this.setState({spin: true})
     API.withdrawEther(tokenInfo.address, tokenInfo.tokenManager.address)
       .then(this._notifyTransaction)
+      .catch(err => {
+        this._setErrorState(err)
+      })
   }
 
   _onActionConfirmTx = tx => {
     const {tokenInfo} = this.state;
+    this.setState({spin: true})
     API.confirmTransaction(tx, tokenInfo.tokenManager.address)
       .then(this._notifyTransaction)
+      .catch(err => {
+        this._setErrorState(err)
+      })
   }
 
-  _buyTokens = value =>
+  _buyTokens = value => {
+    this.setState({spin: true})
     API.buyTokens(this.state.tokenAddress, value)
       .then(this._notifyTransaction)
-
+      .catch(err => {
+        this._setErrorState(err)
+      })
+  }
 
   _crowdsaleManagerChanged = address => this.setState({
     crowdsaleManager: address
@@ -147,8 +212,12 @@ export default class App extends React.Component {
 
   _onActionSetCrowdsaleManager = address => {
     const {tokenInfo} = this.state;
-      API.setCrowdsaleManager(tokenInfo.address, address, tokenInfo.tokenManager.address)
-        .then(this._notifyTransaction)
+    this.setState({spin: true})
+    API.setCrowdsaleManager(tokenInfo.address, address, tokenInfo.tokenManager.address)
+      .then(this._notifyTransaction)
+      .catch(err => {
+        this._setErrorState(err)
+      })
   }
 
 
@@ -166,12 +235,26 @@ export default class App extends React.Component {
     const state = this.state;
 
     return (
-      <MuiThemeProvider>
-        <div className="App">
-          <TokenAddress
+      <MuiThemeProvider muiTheme={getMuiTheme(state.muiTheme)}>
+        <div className="App"
+          style={{
+            backgroundColor: state.muiTheme.palette.canvasColor,
+            color: state.muiTheme.palette.textColor
+          }}
+        >
+          <TokenAppBar onToggleTheme={this._toggleTheme}/>
+          <TokenAddressTextField
             tokenAddress={state.tokenAddress}
             tokenMsg={state.tokenMsg}
           />
+          { // address is not validated yet
+            this.state.spin
+            ? <div>
+              <p>Interacting with contract may at times be slow. Please be patient.</p>
+              { spinner }
+              </div>
+            : <span></span>
+          }
           { // address is not validated yet
             window.web3 && !this.state.tokenInfo && !this.state.tokenMsg && spinner
           }
@@ -194,12 +277,20 @@ export default class App extends React.Component {
                   info={this.state.tokenInfo}
                   defaultAccount={this.state.defaultAccount}
                   crowdsaleManager={this.state.crowdsaleManager}
+                  isReadOnly={this.state.isReadOnly}
                   onSetPhase={this._onActionSetPhase}
                   onWithdraw={this._onActionWithdraw}
                   onConfirmTx={this._onActionConfirmTx}
                   onSetCrowdsaleManager={this._onActionSetCrowdsaleManager}
                   onCrowdsaleManagerChanged={this._crowdsaleManagerChanged}
                 />
+                { this.state.spin
+                  ? <div>
+                    <p>Interacting with contract may at times be slow. Please be patient.</p>
+                    { spinner }
+                    </div>
+                  : <span></span>
+                }
               </Tab>
             </Tabs>
           }
@@ -219,32 +310,7 @@ export default class App extends React.Component {
       </MuiThemeProvider>
     );
   }
-}
-
-const TokenAddress = props => {
-  const {tokenAddress, tokenMsg} = props;
-  const addressStyle = {
-    textAlign: 'center',
-    fontSize: '20px',
-    color: 'grey'
-  };
-  const errorStyle = props.tokenMsg && props.tokenMsg.ok
-    ? { color: green500 }
-    : {};
-
-  return (
-    <TextField
-      hintText="Token address"
-      style={{margin: '20px 0'}}
-      fullWidth={true}
-      disabled={true}
-      inputStyle={addressStyle}
-      errorStyle={errorStyle}
-      errorText={tokenMsg && tokenMsg.text}
-      value={tokenAddress}
-    />
-  );
-};
+})
 
 const NoWeb3Notification = () =>
   <div>
@@ -258,6 +324,6 @@ const NoWeb3Notification = () =>
       <li>open this page in <a href="https://github.com/ethereum/mist/releases">Mist</a> browser</li>
     </ul>
     <p>
-      Find more info on this project on <a href="https://github.com/vectavi/presale-token">github</a>.
+      Find more info on this project on <a href="https://github.com/vectavi/vpt">github</a>.
     </p>
   </div>;
